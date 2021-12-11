@@ -1,0 +1,7 @@
+*.o
+mytemp
+file.sfs
+fs.sfs
+jefftang_sfs
+
+.vscode

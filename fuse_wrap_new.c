@@ -1,3 +1,4 @@
+// #define _XOPEN_SOURCE 700
 #define FUSE_USE_VERSION 30
 
 #include <fuse.h>
@@ -7,6 +8,7 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
