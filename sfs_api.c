@@ -6,8 +6,6 @@
 
 // NOTE:
 // If you see +1 after an integer division, it's likely there for rounding up.
-// I am assuming that global arrays are initialized to 0 and so far it seems to
-// be true.
 
 #define NUM_INODE_BLOCKS (sizeof(inode) * NUM_INODES / BLOCK_SIZE + 1)
 #define NUM_ROOT_BLOCKS (sizeof(dir_entry) * (NUM_INODES - 1) / BLOCK_SIZE + 1)
@@ -16,7 +14,6 @@
 //
 #define MAX_BLOCKS_ALL_FILES (NUM_INODES - 1) * MAX_BLOCKS_PER_FILE
 // -1 is for the root aka directory
-// block size / int size is the single pointer
 //
 #define NUM_FREE_BITMAP_ROWS (MAX_BLOCKS_ALL_FILES / 64)
 #define NUM_FREE_BITMAP_BLOCKS \
@@ -26,12 +23,12 @@ sizeof(uint64_t) * NUM_FREE_BITMAP_ROWS / BLOCK_SIZE + 1
 
 superblock supblock;
 inode inode_table[NUM_INODES]; // cannot operate on root i-node
-unsigned int current_file = 0; // among the existing files
 // 0th element is unused for consistency (keep it that way!)
 dir_entry dir_table[NUM_INODES];
 //
-fd fdt[NUM_INODES]; // stores root which cannot be closed
+fd fdt[NUM_INODES]; // stores root at index 0, closing it closes the disk
 uint64_t free_block_list[NUM_FREE_BITMAP_ROWS];
+unsigned int current_file = 0; // among the existing files
 
 void write_inode_table() {
   write_blocks(1, NUM_INODE_BLOCKS, inode_table);
@@ -42,6 +39,13 @@ void write_dir_table() {
 void write_free_block_list() {
   // left space for the data blocks
   write_blocks(FREE_BLOCK_LIST_ADDR, NUM_FREE_BITMAP_BLOCKS, free_block_list);
+}
+
+void reset_fdt() {
+  for (int i = 0; i < NUM_INODES; i++) {
+    fdt[i].inode = -1;
+    fdt[i].rwptr = 0;
+  }
 }
 
 void init_superblock() {
@@ -59,11 +63,10 @@ void init_superblock() {
 void mksfs(int fresh) {
   // Reset global variables
   current_file = 0;
+  init_superblock();
 
   if (fresh) {
-    // Init superblock and disk
-    init_superblock();
-    init_fresh_disk(DISK, BLOCK_SIZE, supblock.fs_size);
+    // reset cache
     for (int i = 0; i < NUM_INODES; i++) {
       inode_table[i].mode = 0;
       inode_table[i].size = 0;
@@ -74,31 +77,29 @@ void mksfs(int fresh) {
       dir_table[i].name = "";
       dir_table[i].mode = 0;
     }
-    // Write superblock onto disk
-    write_blocks(0, 1, &supblock);
 
-    // Init root
+    // init root
     fdt[0].inode = 0; // 0th i-node is for the root
     inode_table[0].mode = 1;
     for (int i = 0; i < NUM_ROOT_BLOCKS; i++) {
       free_block_list[0] |= (uint64_t)1 << (63 - i);
     }
 
-    // Write these onto disk
-    write_dir_table();
+    // init and write onto disk
+    init_fresh_disk(DISK, BLOCK_SIZE, supblock.fs_size);
+    write_blocks(0, 1, &supblock);
     write_inode_table();
+    write_dir_table();
     write_free_block_list();
 
     fflush(stdout);
   } else {
     // all files are unopened except root
-    for (int i = 0; i < NUM_INODES; i++) {
-      fdt[i].inode = -1;
-      fdt[i].rwptr = 0;
-    }
+    reset_fdt();
     fdt[0].inode = 0;
 
-    // open superblock, i-node table, directory table, free block list
+    // init and read from disk
+    init_disk(DISK, BLOCK_SIZE, supblock.fs_size);
     read_blocks(0, 1, &supblock);
     read_blocks(1, NUM_INODE_BLOCKS, inode_table);
     read_blocks(1 + NUM_INODE_BLOCKS, NUM_ROOT_BLOCKS, dir_table);
@@ -107,10 +108,6 @@ void mksfs(int fresh) {
 }
 
 int sfs_getnextfilename(char* fname) {
-  if (!(0 <= strlen(fname) && strlen(fname) <= MAXFILENAME)) { // check arg
-    return 0;
-  }
-
   int visited = 0;
   for (int i = 1; i < NUM_INODES; i++) {
     if (dir_table[i].mode == 1) {
@@ -127,7 +124,6 @@ int sfs_getnextfilename(char* fname) {
   current_file = 0;
 
   return 0;
-
 }
 
 int sfs_getfilesize(const char* path) {
@@ -214,11 +210,19 @@ int sfs_fclose(int fileID) {
   }
 
   fd* f = &fdt[fileID];
+
+  // if file is already closed
   if (f->inode == -1) {
-    return -1;  // already closed file
+    return -1;
   }
-  f->inode = -1;
-  f->rwptr = 0;
+
+  if (fileID == 0) { // first fd always reserved for root
+    close_disk();
+    reset_fdt();
+  } else {
+    f->inode = -1;
+    f->rwptr = 0;
+  }
 
   return 0;
 }
