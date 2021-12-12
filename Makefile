@@ -1,3 +1,5 @@
+# I got tests 0-2 and `fuse_wrap_new.c` working with no errors. I can't get `fuse_wrap_old.c` to work. If you get something different you can let me know.
+
 CFLAGS = -c -g -ansi -pedantic -Wall -std=gnu99 `pkg-config fuse --cflags --libs`
 
 LDFLAGS = `pkg-config fuse --cflags --libs`

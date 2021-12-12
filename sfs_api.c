@@ -27,7 +27,6 @@ sizeof(uint64_t) * NUM_FREE_BITMAP_ROWS / BLOCK_SIZE + 1
 superblock supblock;
 inode inode_table[NUM_INODES]; // cannot operate on root i-node
 unsigned int current_file = 0; // among the existing files
-int num_root_blocks = 0;
 // 0th element is unused for consistency (keep it that way!)
 dir_entry dir_table[NUM_INODES];
 //
@@ -51,7 +50,7 @@ void init_superblock() {
   supblock.inode_table_len = NUM_INODE_BLOCKS;
   supblock.root_dir_inode = 0;  // 0th i-node -> root dir
   supblock.fs_size = 1 // superblock 
-    + num_root_blocks
+    + NUM_ROOT_BLOCKS
     + NUM_INODE_BLOCKS
     + MAX_BLOCKS_ALL_FILES
     + NUM_FREE_BITMAP_BLOCKS;
@@ -60,7 +59,6 @@ void init_superblock() {
 void mksfs(int fresh) {
   // Reset global variables
   current_file = 0;
-  num_root_blocks = NUM_ROOT_BLOCKS;
 
   if (fresh) {
     // Init superblock and disk
@@ -132,44 +130,18 @@ int sfs_getnextfilename(char* fname) {
 
 }
 
-void sfs_getfilesize_helper(int* index_data_block, int* size) {
-  if (*index_data_block > 0) {
-    char buff_data[BLOCK_SIZE];
-    read_blocks(*index_data_block, 1, (void*)buff_data);
-    for (int i = 0; i < BLOCK_SIZE; i++) {
-      if (buff_data[i] != '\0') {
-        (*size)++;
-      }
-    }
-  }
-}
 int sfs_getfilesize(const char* path) {
   if (!(0 <= strlen(path) && strlen(path) <= MAXFILENAME)) { // check arg
     return 0;
   }
 
-  int size = 0;
-
   for (int i = 1; i < NUM_INODES; i++) {
     if (dir_table[i].mode == 1 && strcmp(path, dir_table[i].name) == 0) {
-      size += inode_table[i].size;
-
-      // size of direct blocks
-      for (int j = 0; j < 12; j++) {
-        int index_data_block = inode_table[i].direct[j];
-        sfs_getfilesize_helper(&index_data_block, &size);
-      }
-      // size from indirect blocks
-      for (int j = 0; j < NUM_INDIRECT_PTR_ENTRIES; j++) {
-        int index_data_block = inode_table[i].indirect[j];
-        sfs_getfilesize_helper(&index_data_block, &size);
-      }
-
-      break;
+      return inode_table[i].size;
     }
   }
 
-  return size;
+  return 0;
 }
 
 int sfs_fopen(char* name) {
@@ -308,13 +280,13 @@ int sfs_fwrite(int fileID, const char* buf, int length) {
 
     // EDIT BLOCK BUFFER
     while (block_offset < BLOCK_SIZE && bytes_written < buf_len) {
-      if (buf[bytes_written] == '\0') {
+      (f->rwptr)++;
+      if (file_inode->size < f->rwptr) {
         (file_inode->size)++;
       }
       block_buf[block_offset] = buf[bytes_written];
       block_offset++;
       bytes_written++;
-      (f->rwptr)++;
     }
 
     // WRITE BLOCK BUFFER INTO DISK
@@ -424,17 +396,14 @@ int sfs_fread(int fileID, char* buf, int length) {
     nth_inode_block++;
   }
 
-  if (file_inode->size == 0) {
-    int chars = 0;
-    for (int i = 0; i < length; i++) {
-      if (buf[i] != '\0') {
-        chars++;
-      }
+  // can't just return bytes_read, because some of buf could just be empty space
+  int valid_bytes_read = 0;
+  for (int i = 0; i < length; i++) {
+    if (buf[i] != '\0') {
+      valid_bytes_read = i;
     }
-    return chars;
   }
-
-  return bytes_read;
+  return valid_bytes_read + 1;
 }
 
 int sfs_fseek(int fileID, int loc) {

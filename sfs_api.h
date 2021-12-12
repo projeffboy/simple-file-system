@@ -70,7 +70,3 @@ typedef struct {
 } dir_entry;
 
 #endif
-
-/*
-i-node.size and bytes_read
-*/
