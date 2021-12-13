@@ -65,7 +65,13 @@ typedef struct {
 } inode;
 
 typedef struct {
-  char* name;
+  // idk why, but if I don't times 7 or more it segfaults. Otherwise works
+  // perfectly. It results in 20 wasted blocks for 1024B blocks, so not a big
+  // deal, but it's worth exploring in the future. The other option is turning
+  // this into a char pointer, but that requires malloc, which makes the old
+  // fuse wrapper fail.
+  char name[MAXFILENAME * 7];
+  //
   unsigned int mode; // does it exist? 1 or yes, 0 for no
 } dir_entry;
 

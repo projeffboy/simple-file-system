@@ -74,16 +74,13 @@ void mksfs(int fresh) {
       fdt[i].inode = -1;
       fdt[i].rwptr = 0;
 
-      dir_table[i].name = "";
+      strcpy(dir_table[i].name, "");
       dir_table[i].mode = 0;
     }
 
     // init root
     fdt[0].inode = 0; // 0th i-node is for the root
     inode_table[0].mode = 1;
-    for (int i = 0; i < NUM_ROOT_BLOCKS; i++) {
-      free_block_list[0] |= (uint64_t)1 << (63 - i);
-    }
 
     // init and write onto disk
     init_fresh_disk(DISK, BLOCK_SIZE, supblock.fs_size);
@@ -183,7 +180,6 @@ int sfs_fopen(char* name) {
   for (int i = 1; i < NUM_INODES; i++) {
     if (inode_table[i].mode == 0) {
       inode_table[i].mode = 1;
-      dir_table[i].name = (char*)malloc(strlen(name));
       strcpy(dir_table[i].name, name);
       dir_table[i].mode = 1;
       write_inode_table();

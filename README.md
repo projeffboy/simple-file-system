@@ -1,11 +1,40 @@
-I got tests 0-2 and `fuse_wrap_new.c` working with no errors. I can't get `fuse_wrap_old.c` to work. If you get different results than me you can let me know.
+I got tests 0-2 working with 0 errors, although once every like 40 tries I get a minor error (e.g. ERROR: Requested 115 bytes, read 114). Fuse wrapper tests work fine based on my quick demo. If you get different results than me you can let me know.
 
 For tests 0-2:
 ```bash
 make clean && make && ./jefftang_sfs && make clean
 ```
 
-For testing `sfs_newfile` and `sfs_oldfile`:
+For the `fuse_wrap_new.c` and `fuse_wrap_old.c` tests:
+```bash
+mkdir mytemp
+
+# fuse_wrap_new.c
+make clean && make && ./jefftang_sfs mytemp
+strings fs.sfs # should be empty
+cp Makefile README.md mytemp # add some files into mytemp
+strings fs.sfs # should see text
+ls mytemp # not empty
+killall jefftang_sfs # or `fusermount -u mytemp`
+ls mytemp # empty
+
+# fuse_wrap_old.c
+make clean && make && ./jefftang_sfs mytemp
+ls mytemp # not empty
+rm mytemp/*
+ls mytemp # empty
+echo aaron > mytemp/names.txt
+strings fs.sfs # you should still see the deleted file contents, because those bytes were not overwritten. You may even see the names of the deleted files, but remember their mode is set to 0, which is why they don't show up. When I ran this, filename `/Makefile` doesn't even show up, because it got overwritten by `/names.txt`.
+ls mytemp # not empty
+cat mytemp/Makefile # nothing
+cat mytemp/names.txt # something
+
+killall jefftang_sfs # or `fusermount -u mytemp`
+ls mytemp # empty
+```
+
+
+For testing `sfs_newfile` and `sfs_oldfile` (don't even think this is necessary):
 ```bash
 chmod 744 ./sfs_newfile
 chmod 744 ./sfs_oldfile
@@ -25,21 +54,6 @@ killall sfs_oldfile # or `fusermount -u mytemp`
 ls mytemp # empty
 
 rm -r mytemp file.sfs
-```
-
-For the `fuse_wrap_new.c` and `fuse_wrap_old.c` tests:
-```bash
-mkdir mytemp
-
-make clean && make && ./jefftang_sfs mytemp # fuse_wrap_new.c
-cp Makefile README.md mytemp # add some files into mytemp
-strings fs.sfs # should see text
-ls mytemp # not empty
-killall jefftang_sfs # or `fusermount -u mytemp`
-ls mytemp # empty
-
-make clean && make && ./jefftang_sfs mytemp # fuse_wrap_old.c
-killall jefftang_sfs # or `fusermount -u mytemp`
 ```
 
 my test 1 and 2: 267 iterations, 273408 bytes
