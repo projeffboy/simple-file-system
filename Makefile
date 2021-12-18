@@ -1,4 +1,4 @@
-# I got tests 0-2 working with 0 errors, although once every like 40 tries I get a minor error (e.g. ERROR: Requested 115 bytes, read 114). Fuse wrapper tests work fine based on my quick demo. If you get different results than me you can let me know.
+# I got tests 0-2 working and exiting with 0 errors. Fuse wrapper tests work fine based on my quick demo. If you get different results than me you can let me know.
 
 CFLAGS = -c -g -ansi -pedantic -Wall -std=gnu99 `pkg-config fuse --cflags --libs`
 

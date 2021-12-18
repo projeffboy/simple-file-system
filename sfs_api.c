@@ -8,18 +8,18 @@
 // If you see +1 after an integer division, it's likely there for rounding up.
 
 #define NUM_INODE_BLOCKS (sizeof(inode) * NUM_INODES / BLOCK_SIZE + 1)
-#define NUM_ROOT_BLOCKS (sizeof(dir_entry) * (NUM_INODES - 1) / BLOCK_SIZE + 1)
+#define NUM_ROOT_BLOCKS (sizeof(dir_entry) * NUM_INODES / BLOCK_SIZE + 1)
 #define MAX_BLOCKS_PER_FILE (12 + NUM_INDIRECT_PTR_ENTRIES)
 #define FILE_CAPACITY (BLOCK_SIZE * MAX_BLOCKS_PER_FILE)
 //
 #define MAX_BLOCKS_ALL_FILES (NUM_INODES - 1) * MAX_BLOCKS_PER_FILE
 // -1 is for the root aka directory
 //
-#define NUM_FREE_BITMAP_ROWS (MAX_BLOCKS_ALL_FILES / 64)
+#define NUM_FREE_BITMAP_ROWS (MAX_BLOCKS_ALL_FILES / 64 + 1)
 #define NUM_FREE_BITMAP_BLOCKS \
-sizeof(uint64_t) * NUM_FREE_BITMAP_ROWS / BLOCK_SIZE + 1
+  sizeof(uint64_t) * NUM_FREE_BITMAP_ROWS / BLOCK_SIZE + 1
 #define FREE_BLOCK_LIST_ADDR \
-  1 + NUM_INODE_BLOCKS + NUM_ROOT_BLOCKS + MAX_BLOCKS_ALL_FILES
+  1 /*super block*/ + NUM_INODE_BLOCKS + NUM_ROOT_BLOCKS + MAX_BLOCKS_ALL_FILES
 
 superblock supblock;
 inode inode_table[NUM_INODES]; // cannot operate on root i-node
@@ -74,7 +74,6 @@ void mksfs(int fresh) {
       fdt[i].inode = -1;
       fdt[i].rwptr = 0;
 
-      strcpy(dir_table[i].name, "");
       dir_table[i].mode = 0;
     }
 

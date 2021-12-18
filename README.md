@@ -1,4 +1,4 @@
-I got tests 0-2 working with 0 errors, although once every like 40 tries I get a minor error (e.g. ERROR: Requested 115 bytes, read 114). Fuse wrapper tests work fine based on my quick demo. If you get different results than me you can let me know.
+I got tests 0-2 working and exiting with 0 errors. Fuse wrapper tests work fine based on my quick demo. If you get different results than me you can let me know.
 
 For tests 0-2:
 ```bash
@@ -24,7 +24,7 @@ ls mytemp # not empty
 rm mytemp/*
 ls mytemp # empty
 echo aaron > mytemp/names.txt
-strings fs.sfs # you should still see the deleted file contents, because those bytes were not overwritten. You may even see the names of the deleted files, but remember their mode is set to 0, which is why they don't show up. When I ran this, filename `/Makefile` doesn't even show up, because it got overwritten by `/names.txt`.
+strings fs.sfs # you should still see the deleted file contents, because those bytes were not overwritten. You may even see the names of the deleted files, but remember their mode is set to 0, which is why they don't show up with ls. In fact, filename `/Makefile` doesn't even show up in fs.sfs, because it got overwritten by `/names.txt.
 ls mytemp # not empty
 cat mytemp/Makefile # nothing
 cat mytemp/names.txt # something
